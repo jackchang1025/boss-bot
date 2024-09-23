@@ -1,0 +1,56 @@
+services:
+  boss_bot:
+    container_name: boss_bot_app
+    image: boss_bot:latest
+    build:
+      context: .
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - selenium
+      - chrome
+    networks:
+      - boss-bot
+  selenium:
+    # image: selenium/standalone-chrome:latest
+    image: selenium/hub:latest
+    container_name: boss_bot_selenium
+    environment:
+      SE_GRID_MAX_SESSION: 100 # 最大会话数
+      SE_NODE_MAX_INSTANCES: 100 # 最大会话数
+      SE_NODE_MAX_SESSIONS: 100 # 最大会话数
+      SE_NODE_OVERRIDE_MAX_SESSIONS: true  # 设置为true来覆盖最大限制
+      SE_NODE_OVERRIDE_MAX_INSTANCES: 20 # 最大实例数
+      SE_NODE_OVERRIDE_MAX_SESSION: 20 # 最大会话数
+      SE_VNC_PASSWORD: '123456' # 调式密码
+      SE_SESSION_RETRY_INTERVAL: 1 # 重试间隔
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
+      - '4317:4317'   # Selenium WebDriver 端口
+      - '7900:7900'   # VNC 端口（可选，用于访问 Chrome 无头模式）
+    shm_size: '2gb'     # 增加共享内存，防止 Chrome 无头模式下崩溃
+    networks:
+      - boss-bot
+  chrome:
+    image: selenium/node-chrome:latest
+    container_name: boss_bot_selenium_chrome
+    volumes:
+      - /dev/shm:/dev/shm
+    depends_on:
+      - selenium
+    environment:
+      SE_EVENT_BUS_HOST: selenium
+      SE_EVENT_BUS_PUBLISH_PORT: 4442
+      SE_EVENT_BUS_SUBSCRIBE_PORT: 4443
+      SE_NODE_OVERRIDE_MAX_SESSIONS: true  # 设置为true来覆盖最大限制
+      SE_NODE_MAX_SESSION: 20
+      SE_NODE_MAX_SESSIONS: 20 #最大会话数
+      SE_NODE_MAX_INSTANCES: 20
+      SE_VNC_PASSWORD: '123456' # 调式密码
+    networks:
+      - boss-bot
+networks:
+  boss-bot:
+    driver: bridge
